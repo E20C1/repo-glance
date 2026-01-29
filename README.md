@@ -3,7 +3,7 @@
 *Read this in other languages: [日本語](README.ja.md)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/yourusername/local-uithub?color=blue)](https://github.com/yourusername/local-uithub/releases)
+[![Release](https://img.shields.io/github/v/release/E20C1/local-uithub?color=blue)](https://github.com/E20C1/local-uithub/releases)
 [![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
 [![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
 
