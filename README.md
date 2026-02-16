@@ -3,7 +3,7 @@
 *Read this in other languages: [日本語](README.ja.md)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases)
+[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases/tag/v1.0.0)
 [![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
 [![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
 
@@ -48,6 +48,16 @@
     <td align="center">Copy entire repo<br>content to clipboard</td>
     <td align="center">Embed GitHub Token<br>for higher rate limits</td>
   </tr>
+  <tr>
+    <td align="center">🌓<br><b>Theme & I18N</b></td>
+    <td align="center">📂<br><b>Folder Support</b></td>
+    <td align="center">💅<br><b>Modern UI</b></td>
+  </tr>
+  <tr>
+    <td align="center">Dark/Light Mode<br>English/Japanese</td>
+    <td align="center">Parse Local Folders<br>Directly</td>
+    <td align="center">Glassmorphism<br>Design</td>
+  </tr>
 </table>
 
 - **Single File Portability**: Everything (including JSZip library) is embedded in one `index.html`.
@@ -56,19 +66,24 @@
 
 ## How to Use 👆
 
-### Option A: GitHub API (Online)
+### Tab 1: GitHub API (Online)
 
-1. Open `index.html` in your browser.
+1. Select **"GitHub Repo"** tab.
 2. Enter the **Repository URL** (e.g., `https://github.com/username/repo`).
-3. (Optional) Enter your **GitHub Personal Access Token** if the repo is private or large.
+3. (Optional) Enter your **GitHub Personal Access Token**.
 4. Click **"Fetch from URL"**.
 
-### Option B: Local ZIP (Offline)
+### Tab 2: Local Folder (Offline)
 
-1. Download a repository as a ZIP file from GitHub (or any source).
-2. Open `index.html` in your browser.
-3. Select the ZIP file in the **"Local ZIP"** section.
-4. Click **"Analyze ZIP"**.
+1. Select **"Local Folder"** tab.
+2. Click the upload area to select a folder from your computer.
+3. The browser will parse files immediately.
+
+### Tab 3: Local ZIP (Offline)
+
+1. Select **"Local ZIP"** tab.
+2. Click to select (or drag & drop) a ZIP file.
+3. The tool will unzip and parse contents.
 
 ### Result
 
@@ -119,9 +134,11 @@ repo-glance/
 
 ## Todo 📝
 
-- [ ] Add drag-and-drop support for ZIP files
+- [x] Add drag-and-drop support for ZIP files
 - [ ] Syntax highlighting for code preview
-- [ ] Dark/Light mode toggle
+- [x] Dark/Light mode toggle
+- [x] Internationalization (English/Japanese)
+- [x] Local Folder input support
 - [ ] Save API token to localStorage
 
 ## License 📄
