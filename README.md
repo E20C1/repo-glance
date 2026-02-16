@@ -1,15 +1,15 @@
-# Local Uithub (Fully Offline) 📂
+# Repo Glance (Fully Offline) 📂
 
 *Read this in other languages: [日本語](README.ja.md)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/E20C1/local-uithub?color=blue)](https://github.com/E20C1/local-uithub/releases)
+[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases)
 [![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
 [![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
 
 <p align="center">
   <!-- スクリーンショットがある場合はここに配置 -->
-  <!-- <img src="screenshot.png" alt="Local Uithub Screenshot" width="600"> -->
+  <!-- <img src="screenshot.png" alt="Repo Glance Screenshot" width="600"> -->
   <b>A standalone HTML tool to fetch, parse, and visualize GitHub repositories or local ZIP files offline.</b>
 </p>
 
@@ -101,7 +101,7 @@ const IGNORE_DIRS = ['.git', 'node_modules', 'dist', ...];
 The project consists of a single file for maximum portability.
 
 ```
-local-uithub/
+repo-glance/
 │
 ├── index.html           # The main application (HTML + CSS + JS + Libraries)
 │
