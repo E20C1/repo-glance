@@ -3,7 +3,7 @@
 # Repo Glance (Fully Offline) 📂
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases)
+[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases/tag/v1.0.0)
 [![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
 [![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
 
@@ -47,6 +47,16 @@
     <td align="center">全ソースコードを<br>クリップボードへ一括コピー</td>
     <td align="center">Privateリポジトリ用に<br>GitHubトークン埋め込み可</td>
   </tr>
+  <tr>
+    <td align="center">🌓<br><b>テーマ & I18N</b></td>
+    <td align="center">📂<br><b>フォルダ対応</b></td>
+    <td align="center">💅<br><b>モダンUI</b></td>
+  </tr>
+  <tr>
+    <td align="center">ダーク/ライト切替<br>日英言語切替</td>
+    <td align="center">ローカルフォルダを<br>直接解析可能</td>
+    <td align="center">Glassmorphism<br>デザイン</td>
+  </tr>
 </table>
 
 - **ポータビリティ**: 必要なライブラリ（JSZip）を含むすべてが `index.html` 1つに収まっています。
@@ -55,19 +65,23 @@
 
 ## 使い方 👆
 
-### A. GitHub APIから取得（オンライン）
+### タブ1: GitHub API（オンライン）
 
-1. ブラウザで `index.html` を開きます。
-2. **Repository URL** を入力します（例: `https://github.com/username/repo`）。
-3. (任意) Privateリポジトリや大規模リポジトリの場合は **GitHub Token** を入力します。
-4. **「URLから取得実行」** をクリックします。
+1. **「GitHubリポジトリ」** タブを選択します。
+2. **Repository URL** を入力します。
+3. (任意) トークンを入力し、**「URLから取得」** をクリックします。
 
-### B. ローカルZIPから取得（オフライン）
+### タブ2: ローカルフォルダ（オフライン）
 
-1. GitHubなどからリポジトリをZIPとしてダウンロードします。
-2. ブラウザで `index.html` を開きます。
-3. **「ローカルのZIPから取得」** でファイルを選択します。
-4. **「ZIP解析実行」** をクリックします。
+1. **「ローカルフォルダ」** タブを選択します。
+2. エリアをクリックしてフォルダを選択します。
+3. ブラウザがフォルダ内のファイルを読み取り、テキスト化します。
+
+### タブ3: ローカルZIP（オフライン）
+
+1. **「ローカルZIP」** タブを選択します。
+2. クリック（またはドラッグ＆ドロップ）でZIPファイルを選択します。
+3. 自動的に解析が始まります。
 
 ### 結果の利用
 
@@ -118,9 +132,11 @@ repo-glance/
 
 ## Todo 📝
 
-- [ ] ZIPファイルのドラッグ＆ドロップ対応
+- [x] ZIPファイルのドラッグ＆ドロップ対応
 - [ ] プレビューエリアのシンタックスハイライト
-- [ ] ダークモード/ライトモード切り替えスイッチ
+- [x] ダークモード/ライトモード切り替えスイッチ
+- [x] 日英言語切り替え (I18N)
+- [x] ローカルフォルダ入力対応
 - [ ] トークンのlocalStorage保存機能
 
 ## ライセンス 📄
