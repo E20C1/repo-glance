@@ -1,9 +1,9 @@
 *他の言語で読む: [English](README.md)*
 
-# Local Uithub (Fully Offline) 📂
+# Repo Glance (Fully Offline) 📂
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/E20C1/local-uithub?color=blue)](https://github.com/E20C1/local-uithub/releases)
+[![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases)
 [![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
 [![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
 
@@ -100,7 +100,7 @@ const IGNORE_DIRS = ['.git', 'node_modules', 'dist', ...];
 究極のポータビリティのため、ファイルは実質1つです。
 
 ```
-local-uithub/
+repo-glance/
 │
 ├── index.html           # アプリ本体（HTML, CSS, JS, ライブラリ全て入り）
 │
