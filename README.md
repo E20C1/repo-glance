@@ -16,13 +16,13 @@
 
 ### 🚀 Why Repo Glance?
 
-> **"Serverless & Secure"**
+> **"Serverless & Secure"**<br>
 > Designed for enterprise engineers and privacy-conscious users. Your code is processed entirely within your browser's memory. No data is ever sent to external servers (except standard GitHub API calls if you choose to use them).
 
-> **"No Install Required"**
+> **"No Install Required"**<br>
 > Forget `npm install`, `pip install`, or environment setups. No `node_modules` hell. Just download the HTML file and open it.
 
-> **"Ultimate Portability"**
+> **"Ultimate Portability"**<br>
 > Carry the single `index.html` file on a USB drive. Use it on air-gapped machines or restricted corporate environments where installing CLI tools is prohibited.
 
 ---
