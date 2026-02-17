@@ -1,18 +1,31 @@
-*他の言語で読む: [English](README.md)*
-
 # Repo Glance (Fully Offline) 📂
+
+*他の言語で読む: [English](README.md)*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases/tag/v1.0.0)
-[![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
-[![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
+[![Security: Offline](https://img.shields.io/badge/Security-完全オフライン-success)](index.html)
+[![Zero Dependency](https://img.shields.io/badge/Dependency-インストール不要-blueviolet)](index.html)
 
 <p align="center">
-  <!-- スクリーンショットがある場合はここに配置 -->
-  <b>GitHubリポジトリやローカルZIPファイルを解析し、<br>LLMへのプロンプト入力用にテキスト化する単一HTMLツール。</b>
+  <b>リポジトリを、AIが読める「ひとつのテキスト」へ。</b><br>
+  GitHubリポジトリやローカルファイルを解析し、LLMへのプロンプト入力用に最適化する単一HTMLツール。
 </p>
 
-> サーバー構築不要。`index.html` を開くだけで動作します。
+---
+
+### 🚀 選ばれる3つの理由
+
+> **🔰 インストール一切不要 (No Install Required)**
+> `npm install` や Python環境の構築は必要ありません。`node_modules` の管理に疲れたエンジニアへ。HTMLファイルをダウンロードして開くだけで、数秒でセットアップが完了します。
+
+> **🔒 完全オフライン & セキュア (Serverless & Secure)**
+> データはすべてブラウザ内で処理されます。外部サーバーへのコード送信は一切行われません（GitHub API利用時を除く）。社内規定で外部サービスへのコード貼り付けが制限されている環境や、機密性の高いプロジェクトに最適です。
+
+> **💾 持ち運べるツール (Portable Tool)**
+> 依存ライブラリ（JSZip等）はすべて1つのHTMLファイルに内包されています。USBメモリに入れて持ち運べば、インターネット環境がないオフラインPCや、ソフトウェアインストールが制限された環境でも即座に利用可能です。
+
+---
 
 ## 📋 目次
 
@@ -23,6 +36,8 @@
 - [技術仕様](#技術仕様-)
 - [Todo](#todo-)
 - [ライセンス](#ライセンス-)
+
+
 
 ## 機能概要 💯
 
@@ -40,12 +55,12 @@
   <tr>
     <td align="center">🧹<br><b>スマートフィルタ</b></td>
     <td align="center">📋<br><b>ワンクリックコピー</b></td>
-    <td align="center">🔑<br><b>トークン対応</b></td>
+    <td align="center">keys<br><b>トークン保存</b></td>
   </tr>
   <tr>
     <td align="center">画像や <code>node_modules</code><br>などの不要ファイルを自動除外</td>
     <td align="center">全ソースコードを<br>クリップボードへ一括コピー</td>
-    <td align="center">Privateリポジトリ用に<br>GitHubトークン埋め込み可</td>
+    <td align="center">GitHubトークンを<br>ブラウザに保存可能(任意)</td>
   </tr>
   <tr>
     <td align="center">🌓<br><b>テーマ & I18N</b></td>
@@ -69,7 +84,8 @@
 
 1. **「GitHubリポジトリ」** タブを選択します。
 2. **Repository URL** を入力します。
-3. (任意) トークンを入力し、**「URLから取得」** をクリックします。
+3. (任意) トークンを入力します。**「ブラウザに保存する」** をチェックすると次回以降自動入力されます。
+4. **「URLから取得」** をクリックします。
 
 ### タブ2: ローカルフォルダ（オフライン）
 
@@ -92,16 +108,7 @@
 
 `index.html` 内の変数を編集することで、毎回入力する手間を省けます。
 
-### 1. GitHubトークンの埋め込み
-コード内の以下の部分にトークンを記述します：
-
-```javascript
-// ▼▼▼ 設定エリア ▼▼▼
-const HTML_CONFIG_TOKEN = "ghp_xxxxxxxxxxxxxxxxx"; // ここにトークンを設定
-// ==========================================
-```
-
-### 2. 除外設定
+### 除外設定
 解析から除外したい拡張子やディレクトリをカスタマイズできます：
 
 ```javascript
@@ -137,7 +144,11 @@ repo-glance/
 - [x] ダークモード/ライトモード切り替えスイッチ
 - [x] 日英言語切り替え (I18N)
 - [x] ローカルフォルダ入力対応
-- [ ] トークンのlocalStorage保存機能
+- [x] ローカルフォルダ入力対応
+- [x] トークンのlocalStorage保存機能
+- [ ] プレビューエリアのシンタックスハイライト
+- [ ] ファイルツリーの折りたたみ機能
+- [ ] ツリー内のファイル検索・フィルタリング
 
 ## ライセンス 📄
 
