@@ -16,13 +16,13 @@
 
 ### 🚀 Why Repo Glance?
 
-> **"Serverless & Secure"**<br>
+> **🔰"Serverless & Secure"**<br>
 > Designed for enterprise engineers and privacy-conscious users. Your code is processed entirely within your browser's memory. No data is ever sent to external servers (except standard GitHub API calls if you choose to use them).
 
-> **"No Install Required"**<br>
+> **🔒"No Install Required"**<br>
 > Forget `npm install`, `pip install`, or environment setups. No `node_modules` hell. Just download the HTML file and open it.
 
-> **"Ultimate Portability"**<br>
+> **💾"Ultimate Portability"**<br>
 > Carry the single `index.html` file on a USB drive. Use it on air-gapped machines or restricted corporate environments where installing CLI tools is prohibited.
 
 ---
@@ -123,11 +123,11 @@ The project consists of a single file for maximum portability.
 ```
 repo-glance/
 │
-├── index.html           # The main application (HTML + CSS + JS + Libraries)
+├── repoglance.html           # The main application (HTML + CSS + JS + Libraries)
 │
-├── env.js               # (Optional) External config file for tokens
+├── README.md                # Documentation
 │
-└── README.md            # Documentation
+└── README.ja.md            # Documentation (Japanese)
 ```
 
 ## Technical Specifications 💻
@@ -139,13 +139,6 @@ repo-glance/
 
 ## Todo 📝
 
-- [x] Add drag-and-drop support for ZIP files
-- [ ] Syntax highlighting for code preview
-- [x] Dark/Light mode toggle
-- [x] Internationalization (English/Japanese)
-- [x] Local Folder input support
-- [x] Local Folder input support
-- [x] Save API token to localStorage
 - [ ] Syntax highlighting for code preview
 - [ ] Collapsible file tree nodes
 - [ ] File search / filtering in tree
