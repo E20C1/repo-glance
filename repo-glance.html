@@ -1390,7 +1390,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <p data-i18n="footer">Released under the MIT License.<br>Copyright © 2026 Riku Enoki</p>
+        <p data-i18n="footer">Released under the MIT License.<br>Copyright © 2026 E20C1</p>
     </footer>
 
     <script>
@@ -1678,17 +1678,26 @@
 
         function generateFinalOutput(meta, files) {
             let out = '';
+            out += `---\n`;
             out += `Repository: ${meta.repo}\n`;
             out += `Url: ${meta.url}\n`;
             out += `Branch: ${meta.branch}\n`;
             out += `Files: ${files.length}\n`;
             out += `Method: ${meta.method}\n`;
             out += `Generated at: ${new Date().toLocaleString()}\n`;
-            out += `================================================\n\n`;
+            out += `---\n\n`;
+
+            out += '```\n';
             out += `File Tree:\n`;
             try { out += generateAsciiTree(files.map(f => f.path)); } catch (e) { out += `(Tree Error: ${e.message})`; }
-            out += `\n================================================\n\n`;
-            files.forEach(f => { out += `\n\n=== FILE: ${f.path} ===\n${f.content}`; });
+            out += '\n```\n\n';
+
+            files.forEach(f => {
+                out += '```' + f.path + '\n';
+                out += f.content;
+                if (!f.content.endsWith('\n')) out += '\n';
+                out += '```\n\n';
+            });
             return out;
         }
 
@@ -1782,7 +1791,7 @@
                 feat2Desc: "URLとトークンでリモートリポジトリも取得可能。",
                 feat3Title: "ワンクリックコピー",
                 feat3Desc: "生成テキストをクリップボードへ即座にコピー。",
-                footer: "Released under the MIT License.<br>Copyright © 2026 Riku Enoki",
+                footer: "Released under the MIT License.<br>Copyright © 2026 E20C1",
                 // dynamic JS strings
                 msgInputUrl: "URLを入力してください",
                 msgInputZip: "ZIPファイルを選択してください",
@@ -1834,7 +1843,7 @@
                 feat2Desc: "Fetch remote repositories with URL and token.",
                 feat3Title: "One-Click Copy",
                 feat3Desc: "Copy generated text to clipboard instantly.",
-                footer: "Released under the MIT License.<br>Copyright © 2026 Riku Enoki",
+                footer: "Released under the MIT License.<br>Copyright © 2026 E20C1",
                 // dynamic JS strings
                 msgInputUrl: "Please enter a URL",
                 msgInputZip: "Please select a ZIP file",
