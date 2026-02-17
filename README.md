@@ -4,16 +4,28 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/E20C1/repo-glance?color=blue)](https://github.com/E20C1/repo-glance/releases/tag/v1.0.0)
-[![Offline Capable](https://img.shields.io/badge/Offline-Capable-orange.svg)](#)
-[![Single File](https://img.shields.io/badge/Single-HTML_File-ff69b4.svg)](#)
+[![Security: Offline](https://img.shields.io/badge/Security-Fully%20Offline-success)](index.html)
+[![Zero Dependency](https://img.shields.io/badge/Dependency-Zero-blueviolet)](index.html)
 
 <p align="center">
-  <!-- スクリーンショットがある場合はここに配置 -->
-  <!-- <img src="screenshot.png" alt="Repo Glance Screenshot" width="600"> -->
-  <b>A standalone HTML tool to fetch, parse, and visualize GitHub repositories or local ZIP files offline.</b>
+  <b>Turn your repository into an LLM-ready prompt in seconds.</b><br>
+  A standalone HTML tool to fetch, parse, and visualize codebases without sending data to any server.
 </p>
 
-> No server setup required. Just open the HTML file.
+---
+
+### 🚀 Why Repo Glance?
+
+> **"Serverless & Secure"**
+> Designed for enterprise engineers and privacy-conscious users. Your code is processed entirely within your browser's memory. No data is ever sent to external servers (except standard GitHub API calls if you choose to use them).
+
+> **"No Install Required"**
+> Forget `npm install`, `pip install`, or environment setups. No `node_modules` hell. Just download the HTML file and open it.
+
+> **"Ultimate Portability"**
+> Carry the single `index.html` file on a USB drive. Use it on air-gapped machines or restricted corporate environments where installing CLI tools is prohibited.
+
+---
 
 ## 📋 Table of Contents
 
@@ -24,6 +36,8 @@
 - [Technical Specifications](#technical-specifications-)
 - [Todo](#todo-)
 - [License](#license-)
+
+
 
 ## Features 💯
 
@@ -41,12 +55,12 @@
   <tr>
     <td align="center">🧹<br><b>Smart Filtering</b></td>
     <td align="center">📋<br><b>One-Click Copy</b></td>
-    <td align="center">🔑<br><b>Token Support</b></td>
+    <td align="center">keys<br><b>Secure Token</b></td>
   </tr>
   <tr>
     <td align="center">Auto-ignores binaries<br>and <code>node_modules</code></td>
     <td align="center">Copy entire repo<br>content to clipboard</td>
-    <td align="center">Embed GitHub Token<br>for higher rate limits</td>
+    <td align="center">Save GitHub Token<br>to localStorage (Optional)</td>
   </tr>
   <tr>
     <td align="center">🌓<br><b>Theme & I18N</b></td>
@@ -70,7 +84,7 @@
 
 1. Select **"GitHub Repo"** tab.
 2. Enter the **Repository URL** (e.g., `https://github.com/username/repo`).
-3. (Optional) Enter your **GitHub Personal Access Token**.
+3. (Optional) Enter your **GitHub Personal Access Token**. Check **"Save Token"** to remember it.
 4. Click **"Fetch from URL"**.
 
 ### Tab 2: Local Folder (Offline)
@@ -94,16 +108,7 @@
 
 You can hardcode your settings directly into the `index.html` file to skip manual entry.
 
-### 1. Embed GitHub Token
-Edit the `script` section in `index.html`:
-
-```javascript
-// ▼▼▼ CONFIGURATION AREA ▼▼▼
-const HTML_CONFIG_TOKEN = "your_github_pat_token_here";
-// ==========================
-```
-
-### 2. Ignore Settings
+### Ignore Settings
 Customize the file extensions or directories to ignore:
 
 ```javascript
@@ -139,7 +144,11 @@ repo-glance/
 - [x] Dark/Light mode toggle
 - [x] Internationalization (English/Japanese)
 - [x] Local Folder input support
-- [ ] Save API token to localStorage
+- [x] Local Folder input support
+- [x] Save API token to localStorage
+- [ ] Syntax highlighting for code preview
+- [ ] Collapsible file tree nodes
+- [ ] File search / filtering in tree
 
 ## License 📄
 
