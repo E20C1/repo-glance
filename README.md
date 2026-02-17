@@ -106,8 +106,6 @@
 
 ## Configuration 🛠️
 
-You can hardcode your settings directly into the `index.html` file to skip manual entry.
-
 ### Ignore Settings
 Customize the file extensions or directories to ignore:
 
