@@ -284,6 +284,14 @@
             opacity: 0.6;
         }
 
+        .form-textarea {
+            min-height: 92px;
+            resize: vertical;
+            font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -392,6 +400,49 @@
             margin: 20px 0;
         }
 
+        .exclude-settings {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .exclude-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .exclude-count {
+            display: inline-flex;
+            align-items: center;
+            min-height: 26px;
+            padding: 3px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .exclude-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .exclude-grid .form-section {
+            margin-bottom: 12px;
+        }
+
+        .btn-compact {
+            width: auto;
+            padding: 9px 14px;
+            font-size: 0.85rem;
+        }
+
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -471,6 +522,15 @@
             .feature-grid {
                 grid-template-columns: 1fr;
                 padding: 0 16px;
+            }
+
+            .exclude-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .exclude-grid {
+                grid-template-columns: 1fr;
             }
 
             .navbar {
@@ -1360,6 +1420,29 @@
                 <input type="file" id="zipInput" accept=".zip" style="display:none;" onchange="runZipProcess()" />
             </div>
 
+            <div class="exclude-settings">
+                <div class="exclude-header">
+                    <label class="form-label" data-i18n="labelExcludeSettings">コピー除外設定</label>
+                    <span class="exclude-count" id="excludeRuleCount">0件のルール</span>
+                </div>
+                <div class="exclude-grid">
+                    <div class="form-section">
+                        <label class="form-label" data-i18n="labelProjectExcludes">今回だけ除外</label>
+                        <textarea id="projectExcludePatterns" class="form-input form-textarea"
+                            data-i18n="placeholderProjectExcludes"
+                            placeholder=".env.local&#10;secrets/&#10;src/generated.ts"></textarea>
+                    </div>
+                    <div class="form-section">
+                        <label class="form-label" data-i18n="labelAlwaysExcludes">常に除外</label>
+                        <textarea id="alwaysExcludePatterns" class="form-input form-textarea"
+                            data-i18n="placeholderAlwaysExcludes"
+                            placeholder=".env&#10;.env.*&#10;*.pem&#10;*.key"></textarea>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-compact" onclick="saveAlwaysExcludePatterns()"
+                    data-i18n="btnSaveAlwaysExcludes">常に除外を保存</button>
+            </div>
+
             <hr class="divider" />
             <div id="status" class="status-bar" data-i18n="statusReady">準備完了</div>
             <textarea id="output" class="output-area" data-i18n="placeholderOutput" placeholder="ここに結果が表示されます..."
@@ -1402,6 +1485,19 @@
             '.pyc', '.class', '.o', '.obj', 'package-lock.json', 'yarn.lock', '.git', '.DS_Store'
         ];
         const IGNORE_DIRS = ['.git', 'node_modules', 'dist', 'build', 'vendor', '__pycache__', '.idea', '.vscode'];
+        const ALWAYS_EXCLUDE_STORAGE_KEY = 'repo-glance-always-exclude-patterns';
+        const DEFAULT_ALWAYS_EXCLUDE_PATTERNS = [
+            '.env',
+            '.env.*',
+            '*.pem',
+            '*.key',
+            '*.p12',
+            '*.pfx',
+            'id_rsa',
+            'id_ed25519'
+        ];
+        let activeOutputSource = null;
+        let folderReparseTimer = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             const tokenStatus = document.getElementById('tokenStatus');
@@ -1421,6 +1517,20 @@
                     localStorage.setItem('repo-glance-token', e.target.value.trim());
                 }
             });
+
+            const alwaysExcludeInput = document.getElementById('alwaysExcludePatterns');
+            const projectExcludeInput = document.getElementById('projectExcludePatterns');
+            const savedAlwaysExcludes = localStorage.getItem(ALWAYS_EXCLUDE_STORAGE_KEY);
+            if (alwaysExcludeInput) {
+                alwaysExcludeInput.value = savedAlwaysExcludes !== null
+                    ? savedAlwaysExcludes
+                    : DEFAULT_ALWAYS_EXCLUDE_PATTERNS.join('\n');
+                alwaysExcludeInput.addEventListener('input', updateExcludeRuleCount);
+            }
+            if (projectExcludeInput) {
+                projectExcludeInput.addEventListener('input', handleProjectExcludeInput);
+            }
+            updateExcludeRuleCount();
         });
 
         function handleTokenSave() {
@@ -1431,6 +1541,45 @@
             } else {
                 localStorage.removeItem('repo-glance-token');
             }
+        }
+
+        function saveAlwaysExcludePatterns() {
+            const input = document.getElementById('alwaysExcludePatterns');
+            if (!input) return;
+            localStorage.setItem(ALWAYS_EXCLUDE_STORAGE_KEY, input.value);
+            updateExcludeRuleCount();
+            showToast(t('msgAlwaysExcludesSaved'), 'success');
+        }
+
+        function updateExcludeRuleCount() {
+            const countEl = document.getElementById('excludeRuleCount');
+            if (!countEl) return;
+            countEl.textContent = t('excludeRuleCount').replace('{n}', getActiveExcludeRules().length);
+        }
+
+        function handleProjectExcludeInput() {
+            updateExcludeRuleCount();
+            scheduleFolderReparseIfReady();
+        }
+
+        function scheduleFolderReparseIfReady() {
+            if (!canReparseCurrentFolderOutput()) return;
+            if (folderReparseTimer) clearTimeout(folderReparseTimer);
+            folderReparseTimer = setTimeout(() => {
+                folderReparseTimer = null;
+                if (canReparseCurrentFolderOutput()) runFolderProcess({ reapplyExcludes: true });
+            }, 500);
+        }
+
+        function canReparseCurrentFolderOutput() {
+            const copyBtn = document.getElementById('copyBtn');
+            const folderInput = document.getElementById('folderInput');
+            return activeOutputSource === 'folder'
+                && copyBtn
+                && !copyBtn.disabled
+                && folderInput
+                && folderInput.files
+                && folderInput.files.length > 0;
         }
 
         // Helper for JS-based translations
@@ -1473,6 +1622,7 @@
             const copyBtn = document.getElementById('copyBtn');
 
             if (processing) {
+                activeOutputSource = null;
                 outputEl.value = '';
                 if (apiBtn) apiBtn.disabled = true;
                 if (folderInput) folderInput.disabled = true;
@@ -1513,10 +1663,11 @@
                 const treeRes = await fetch(`https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${defaultBranch}?recursive=1`, { headers });
                 if (!treeRes.ok) throw new Error(`Tree Error: ${treeRes.status}`);
                 const treeData = await treeRes.json();
+                const excludeRules = getActiveExcludeRules(repoInfo.repo);
 
                 const files = treeData.tree.filter(item => {
                     if (item.type !== 'blob') return false;
-                    return !isIgnored(item.path);
+                    return !isIgnored(item.path, excludeRules);
                 });
 
                 if (files.length === 0) throw new Error(t('msgFileNotFound'));
@@ -1548,6 +1699,7 @@
                 const metaInfo = { repo: `${repoInfo.owner}/${repoInfo.repo}`, url: urlInput, branch: defaultBranch, method: `API (${source})` };
                 outputEl.value = generateFinalOutput(metaInfo, fileContents);
                 setUIState(false, t('msgComplete'));
+                activeOutputSource = 'api';
                 document.getElementById('copyBtn').disabled = false;
 
             } catch (err) {
@@ -1574,9 +1726,11 @@
                 const zipEntries = [];
                 loadedZip.forEach((relativePath, zipEntry) => zipEntries.push({ path: relativePath, entry: zipEntry }));
                 zipEntries.sort((a, b) => a.path.localeCompare(b.path));
+                const zipRootNames = getZipRootNames(zipEntries.map(item => item.path), file.name);
+                const excludeRules = getActiveExcludeRules(zipRootNames);
 
                 for (const item of zipEntries) {
-                    if (item.entry.dir || isIgnored(item.path)) continue;
+                    if (item.entry.dir || isIgnored(item.path, excludeRules)) continue;
                     try {
                         const content = await item.entry.async("string");
                         fileContents.push({ path: item.path, content: content });
@@ -1589,6 +1743,7 @@
                 const metaInfo = { repo: file.name, url: "Local File", branch: "Unknown", method: "Local ZIP (Offline)" };
                 outputEl.value = generateFinalOutput(metaInfo, fileContents);
                 setUIState(false, t('msgZipComplete'));
+                activeOutputSource = 'zip';
                 document.getElementById('copyBtn').disabled = false;
 
             } catch (err) {
@@ -1598,11 +1753,11 @@
             }
         }
 
-        async function runFolderProcess() {
+        async function runFolderProcess(options = {}) {
             const fileInput = document.getElementById('folderInput');
             if (!fileInput.files || fileInput.files.length === 0) { showToast(t('msgInputFolder'), 'error'); return; }
 
-            setUIState(true, t('msgProcessingFolder'));
+            setUIState(true, options.reapplyExcludes ? t('msgReprocessingFolder') : t('msgProcessingFolder'));
             const outputEl = document.getElementById('output');
             const files = Array.from(fileInput.files);
 
@@ -1623,11 +1778,12 @@
 
                 let processedCount = 0;
                 const BATCH_SIZE = 10;
+                const excludeRules = getActiveExcludeRules(rootName);
 
                 for (let i = 0; i < files.length; i += BATCH_SIZE) {
                     const batch = files.slice(i, i + BATCH_SIZE);
                     const results = await Promise.all(batch.map(async f => {
-                        if (isIgnored(f.webkitRelativePath)) return null;
+                        if (isIgnored(f.webkitRelativePath, excludeRules)) return null;
                         try {
                             const content = await reader(f);
                             return { path: f.webkitRelativePath, content: content };
@@ -1644,7 +1800,8 @@
                 if (fileContents.length === 0) throw new Error(t('msgFileNotFound'));
                 const metaInfo = { repo: rootName, url: "Local Folder", branch: "Unknown", method: "Local Folder (Offline)" };
                 outputEl.value = generateFinalOutput(metaInfo, fileContents);
-                setUIState(false, t('msgFolderComplete'));
+                setUIState(false, options.reapplyExcludes ? t('msgFolderReapplied') : t('msgFolderComplete'));
+                activeOutputSource = 'folder';
                 document.getElementById('copyBtn').disabled = false;
 
             } catch (err) {
@@ -1667,12 +1824,124 @@
             if (panel) panel.classList.add('active');
         }
 
-        function isIgnored(path) {
-            const pathParts = path.split('/');
+        function getActiveExcludeRules(rootNames = '') {
+            const always = document.getElementById('alwaysExcludePatterns')?.value || '';
+            const project = document.getElementById('projectExcludePatterns')?.value || '';
+            return parseExcludeRules(`${always}\n${project}`, rootNames);
+        }
+
+        function parseExcludeRules(text, rootNames = '') {
+            return text
+                .split(/\r?\n|,/)
+                .map(rule => rule.replace(/#.*$/, '').trim())
+                .filter(Boolean)
+                .map(rule => createExcludeRule(rule, rootNames))
+                .filter(Boolean);
+        }
+
+        function createExcludeRule(raw, rootNames = '') {
+            const hadTrailingSlash = /[\\/]$/.test(raw);
+            const value = normalizeRepoPath(raw).toLowerCase();
+            if (!value) return null;
+
+            const hasWildcard = /[*?]/.test(value);
+            const hasSlash = value.includes('/');
+            const lastPart = value.split('/').pop();
+            const directoryLike = hadTrailingSlash || (!hasWildcard && !lastPart.includes('.'));
+            const values = getExcludeRuleValues(value, rootNames);
+
+            return {
+                value,
+                values,
+                hasWildcard,
+                hasSlash,
+                directoryLike,
+                regexes: hasWildcard ? values.map(globToRegExp) : []
+            };
+        }
+
+        function normalizeRepoPath(path) {
+            return String(path)
+                .replace(/\\/g, '/')
+                .replace(/\/+/g, '/')
+                .replace(/^\.?\//, '')
+                .replace(/^\/+|\/+$/g, '')
+                .trim();
+        }
+
+        function getExcludeRuleValues(value, rootNames = '') {
+            const values = [value];
+            const roots = Array.isArray(rootNames) ? rootNames : [rootNames];
+            roots
+                .map(rootName => normalizeRepoPath(rootName).toLowerCase())
+                .filter(Boolean)
+                .forEach(rootName => {
+                    if (value.startsWith(`${rootName}/`)) {
+                        values.push(value.slice(rootName.length + 1));
+                    }
+                });
+            return [...new Set(values.filter(Boolean))];
+        }
+
+        function getZipRootNames(paths, fileName) {
+            const normalizedPaths = paths.map(normalizeRepoPath).filter(Boolean);
+            const firstParts = normalizedPaths.map(path => path.split('/')[0]).filter(Boolean);
+            const commonRoot = firstParts.length > 0 && firstParts.every(part => part === firstParts[0])
+                ? firstParts[0]
+                : '';
+            return [...new Set([commonRoot, fileName.replace(/\.zip$/i, '')].filter(Boolean))];
+        }
+
+        function globToRegExp(pattern) {
+            const escaped = pattern
+                .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+                .replace(/\*/g, '.*')
+                .replace(/\?/g, '.');
+            return new RegExp(`^${escaped}$`);
+        }
+
+        function isCustomExcluded(path, rules) {
+            if (!rules || rules.length === 0) return false;
+            const normalizedPath = normalizeRepoPath(path).toLowerCase();
+            const pathParts = normalizedPath.split('/').filter(Boolean);
+            const fileName = pathParts[pathParts.length - 1] || '';
+
+            return rules.some(rule => {
+                if (rule.hasWildcard) {
+                    if (!rule.hasSlash) return pathParts.some(part => rule.regexes.some(regex => regex.test(part)));
+                    return rule.regexes.some(regex => {
+                        for (let i = 0; i < pathParts.length; i++) {
+                            if (regex.test(pathParts.slice(i).join('/'))) return true;
+                        }
+                        return false;
+                    });
+                }
+
+                if (rule.directoryLike) {
+                    return rule.values.some(value => {
+                        if (!value.includes('/')) return pathParts.includes(value);
+                        return normalizedPath === value
+                            || normalizedPath.startsWith(`${value}/`)
+                            || normalizedPath.endsWith(`/${value}`)
+                            || normalizedPath.includes(`/${value}/`);
+                    });
+                }
+
+                return rule.values.some(value => {
+                    if (!value.includes('/')) return fileName === value;
+                    return normalizedPath === value || normalizedPath.endsWith(`/${value}`);
+                });
+            });
+        }
+
+        function isIgnored(path, customRules = getActiveExcludeRules()) {
+            const normalizedPath = normalizeRepoPath(path);
+            const pathParts = normalizedPath.split('/');
             const fileName = pathParts[pathParts.length - 1];
-            if (path.includes('__MACOSX')) return true;
+            if (normalizedPath.includes('__MACOSX')) return true;
             if (pathParts.some(p => IGNORE_DIRS.includes(p))) return true;
-            if (IGNORE_EXTENSIONS.some(ext => fileName.toLowerCase().endsWith(ext))) return true;
+            if (IGNORE_EXTENSIONS.some(ext => fileName.toLowerCase().endsWith(ext.toLowerCase()))) return true;
+            if (isCustomExcluded(normalizedPath, customRules)) return true;
             return false;
         }
 
@@ -1776,6 +2045,13 @@
                 labelUrl: "GitHub URL",
                 labelToken: "GitHub Token (オプション)",
                 labelSaveToken: "トークンをブラウザに保存する",
+                labelExcludeSettings: "コピー除外設定",
+                labelProjectExcludes: "今回だけ除外",
+                labelAlwaysExcludes: "常に除外",
+                placeholderProjectExcludes: ".env.local\nsecrets/\nsrc/generated.ts",
+                placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
+                btnSaveAlwaysExcludes: "常に除外を保存",
+                excludeRuleCount: "{n}件のルール",
                 btnApi: "URLから取得",
                 btnZip: "ZIPを選択",
                 msgSelectFolder: "フォルダを選択してください",
@@ -1799,9 +2075,11 @@
                 msgProcessingApi: "API経由で処理中...",
                 msgProcessingZip: "ZIPファイルを処理中...",
                 msgProcessingFolder: "フォルダを処理中...",
+                msgReprocessingFolder: "除外設定を反映中...",
                 msgComplete: "完了しました！",
                 msgZipComplete: "ZIP解析完了！",
                 msgFolderComplete: "フォルダ解析完了！",
+                msgFolderReapplied: "除外設定を反映しました！",
                 msgError: "エラー: ",
                 msgErrorDetail: "エラー詳細:",
                 msgFileNotFound: "ファイルが見つかりません",
@@ -1812,6 +2090,7 @@
                 msgFetchContent: "ファイル内容を取得中",
                 placeholderOutput: "ここに結果が表示されます...",
                 msgCopySuccess: "コピーしました！ ✨",
+                msgAlwaysExcludesSaved: "常に除外するルールを保存しました",
                 msgTokenSourceHtml: "(HTML設定トークン有効)",
                 msgTokenSourceEnv: "(env.jsトークン有効)",
                 msgZipLibError: "JSZipライブラリが見つかりません。コードが正しく埋め込まれているか確認してください。"
@@ -1828,6 +2107,13 @@
                 labelUrl: "GitHub URL",
                 labelToken: "GitHub Token (Optional)",
                 labelSaveToken: "Save Token to browser",
+                labelExcludeSettings: "Copy Exclusions",
+                labelProjectExcludes: "This Run",
+                labelAlwaysExcludes: "Always Exclude",
+                placeholderProjectExcludes: ".env.local\nsecrets/\nsrc/generated.ts",
+                placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
+                btnSaveAlwaysExcludes: "Save Always Excludes",
+                excludeRuleCount: "{n} rules",
                 btnApi: "Fetch from URL",
                 btnZip: "Select ZIP",
                 msgSelectFolder: "Select a folder",
@@ -1851,9 +2137,11 @@
                 msgProcessingApi: "Processing via API...",
                 msgProcessingZip: "Processing ZIP file...",
                 msgProcessingFolder: "Processing folder...",
+                msgReprocessingFolder: "Applying exclusions...",
                 msgComplete: "Completed!",
                 msgZipComplete: "ZIP analysis completed!",
                 msgFolderComplete: "Folder analysis completed!",
+                msgFolderReapplied: "Exclusions applied!",
                 msgError: "Error: ",
                 msgErrorDetail: "Error Details:",
                 msgFileNotFound: "File not found",
@@ -1864,6 +2152,7 @@
                 msgFetchContent: "Fetching file content",
                 placeholderOutput: "Results will be shown here...",
                 msgCopySuccess: "Copied! ✨",
+                msgAlwaysExcludesSaved: "Always-exclude rules saved",
                 msgTokenSourceHtml: "(HTML Config Token Active)",
                 msgTokenSourceEnv: "(env.js Token Active)",
                 msgZipLibError: "JSZip library not found. Please check code embedding."
@@ -1887,6 +2176,7 @@
                 }
             });
             localStorage.setItem('repo-glance-lang', lang);
+            updateExcludeRuleCount();
         }
 
         // ===== Theme Toggle =====

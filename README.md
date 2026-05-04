@@ -48,7 +48,7 @@
     <td align="center">🌳<br><b>Tree Visualization</b></td>
   </tr>
   <tr>
-    <td align="center">Support for both<br><b>GitHub API & Local ZIP</b></td>
+    <td align="center">Support for<br><b>GitHub, Folder & ZIP</b></td>
     <td align="center">Zero dependencies,<br><b>Single HTML file</b></td>
     <td align="center">Auto-generates<br><b>ASCII File Tree</b></td>
   </tr>
@@ -58,7 +58,7 @@
     <td align="center">keys<br><b>Secure Token</b></td>
   </tr>
   <tr>
-    <td align="center">Auto-ignores binaries<br>and <code>node_modules</code></td>
+    <td align="center">Auto-ignores binaries<br>plus custom exclusions</td>
     <td align="center">Copy entire repo<br>content to clipboard</td>
     <td align="center">Save GitHub Token<br>to localStorage (Optional)</td>
   </tr>
@@ -74,9 +74,10 @@
   </tr>
 </table>
 
-- **Single File Portability**: Everything (including JSZip library) is embedded in one `index.html`.
+- **Single File Portability**: Everything (including JSZip library) is embedded in one `repo-glance.html`.
 - **Privacy Focused**: Runs entirely in your browser. No data is sent to any external server (except GitHub API if used).
 - **Smart Filtering**: Automatically excludes binary files (images, executables) and heavy directories like `.git` or `node_modules`.
+- **Copy Exclusions**: Add project-specific or always-on path rules so selected folders/files never enter the generated LLM text.
 
 ## How to Use 👆
 
@@ -99,6 +100,16 @@
 2. Click to select (or drag & drop) a ZIP file.
 3. The tool will unzip and parse contents.
 
+### Optional: Copy Exclusions
+
+Before fetching or parsing, use **Copy Exclusions** to keep specific files or folders out of the generated text for **GitHub Repo**, **Local Folder**, and **Local ZIP**.
+
+- **This Run**: Rules for the current repository or folder only.
+- **Always Exclude**: Saved in your browser and applied to every project.
+- Missing files or folders are ignored silently, so you can keep global rules such as `.env` or `secrets/` even when a project does not contain them.
+- The default always-exclude list is prefilled with common secret/key patterns and can be edited or cleared.
+- When a Local Folder result is already ready to copy, editing **This Run** automatically re-parses the selected folder so the output reflects the latest exclusions.
+
 ### Result
 
 - The tool displays repository metadata, an ASCII file tree, and the text content of all files combined.
@@ -107,12 +118,19 @@
 ## Configuration 🛠️
 
 ### Ignore Settings
-Customize the file extensions or directories to ignore:
+Built-in filters skip common binary files and heavy directories. Copy Exclusions add editable path rules on top:
 
-```javascript
-const IGNORE_EXTENSIONS = ['.png', '.jpg', '.exe', '.zip', ...];
-const IGNORE_DIRS = ['.git', 'node_modules', 'dist', ...];
+```text
+.env
+.env.*
+secrets/
+src/generated.ts
+*.pem
 ```
+
+Rules can be file names, folder names, relative paths, or simple `*` / `?` patterns. Folder rules may end with `/`, but they do not have to.
+
+You may include the project root folder in a rule, such as `BlurSubspace/src/assets/houston.webp`. Repo Glance also understands the equivalent relative path `src/assets/houston.webp`.
 
 ## File Structure 📁
 
@@ -121,7 +139,7 @@ The project consists of a single file for maximum portability.
 ```
 repo-glance/
 │
-├── repoglance.html           # The main application (HTML + CSS + JS + Libraries)
+├── repo-glance.html          # The main application (HTML + CSS + JS + Libraries)
 │
 ├── README.md                # Documentation
 │
