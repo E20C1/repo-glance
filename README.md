@@ -159,12 +159,6 @@ repo-glance/
 - **API**: GitHub REST API v3
 - **Compatibility**: Chrome, Firefox, Edge, Safari (Modern Browsers)
 
-## Todo 📝
-
-- [ ] Syntax highlighting for code preview
-- [ ] Collapsible file tree nodes
-- [x] File search / filtering in tree
-
 ## License 📄
 
 [MIT License](LICENSE)
