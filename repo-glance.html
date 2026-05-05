@@ -1645,6 +1645,7 @@
         let selectableTreeIndex = new Map();
         let selectedTreeExcludePaths = new Set();
         let lockedTreeExcludePaths = new Set();
+        let lockedTreeDisplayPaths = new Set();
 
         window.addEventListener('DOMContentLoaded', () => {
             const tokenStatus = document.getElementById('tokenStatus');
@@ -1780,6 +1781,7 @@
             selectableTreeRoot = buildSelectableTree(normalizedPaths);
             selectableTreeIndex = new Map();
             indexTreeNodes(selectableTreeRoot);
+            lockedTreeDisplayPaths = getLockedDisplayPaths(activeRootNames);
             renderTreePicker();
         }
 
@@ -1788,6 +1790,15 @@
             return new Set(paths
                 .map(path => normalizeRepoPath(path).toLowerCase())
                 .filter(path => isCustomExcluded(path, rules)));
+        }
+
+        function getLockedDisplayPaths(rootNames = '') {
+            const rules = getAlwaysExcludeRules(rootNames);
+            const displayPaths = new Set();
+            selectableTreeIndex.forEach((node, path) => {
+                if (isCustomExcluded(path, rules)) displayPaths.add(path.toLowerCase());
+            });
+            return displayPaths;
         }
 
         function buildSelectableTree(paths) {
@@ -1863,13 +1874,14 @@
             const row = document.createElement('div');
             row.className = 'tree-node-row';
             const lockState = getTreeNodeLockState(node);
-            if (lockState !== 'none') row.classList.add('locked');
+            const effectiveLockState = getTreeNodeEffectiveLockState(node);
+            if (lockState !== 'none' || effectiveLockState === 'full') row.classList.add('locked');
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'tree-exclude-checkbox';
             checkbox.dataset.path = node.path;
-            if (lockState === 'full') checkbox.disabled = true;
+            if (effectiveLockState === 'full') checkbox.disabled = true;
             checkbox.addEventListener('change', handleTreeExcludeToggle);
 
             const icon = document.createElement('span');
@@ -1883,7 +1895,7 @@
             row.appendChild(checkbox);
             row.appendChild(icon);
             row.appendChild(name);
-            if (lockState !== 'none') {
+            if (lockState === 'full') {
                 const lock = document.createElement('span');
                 lock.className = 'tree-node-lock';
                 lock.textContent = t('treeAlwaysExcluded');
@@ -1929,8 +1941,7 @@
                 const checkedCount = node.filePaths.filter(path =>
                     lockedTreeExcludePaths.has(path) || selectedTreeExcludePaths.has(path)
                 ).length;
-                const lockedCount = node.filePaths.filter(path => lockedTreeExcludePaths.has(path)).length;
-                checkbox.disabled = lockedCount === node.filePaths.length;
+                checkbox.disabled = getTreeNodeEffectiveLockState(node) === 'full';
                 checkbox.checked = checkedCount === node.filePaths.length;
                 checkbox.indeterminate = checkedCount > 0 && checkedCount < node.filePaths.length;
             });
@@ -1944,6 +1955,11 @@
         }
 
         function getTreeNodeLockState(node) {
+            if (!node || !node.path) return 'none';
+            return lockedTreeDisplayPaths.has(node.path.toLowerCase()) ? 'full' : 'none';
+        }
+
+        function getTreeNodeEffectiveLockState(node) {
             if (!node || node.filePaths.length === 0) return 'none';
             const lockedCount = node.filePaths.filter(path => lockedTreeExcludePaths.has(path)).length;
             if (lockedCount === 0) return 'none';
