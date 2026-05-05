@@ -78,6 +78,7 @@
 - **Privacy Focused**: Runs entirely in your browser. No data is sent to any external server (except GitHub API if used).
 - **Smart Filtering**: Automatically excludes binary files (images, executables) and heavy directories like `.git` or `node_modules`.
 - **Copy Exclusions**: Add project-specific or always-on path rules so selected folders/files never enter the generated LLM text.
+- **Tree Search**: Filter the tree picker by file name, folder name, or relative path.
 
 ## How to Use 👆
 
@@ -107,6 +108,7 @@ Before fetching or parsing, use **Copy Exclusions** to keep specific files or fo
 - **This Run**: Rules for the current repository or folder only.
 - **Always Exclude**: Saved in your browser and applied to every project.
 - **Choose from tree**: After analysis, open the dropdown and select files or folders with checkboxes. Checking a parent folder selects its child files; individual children can still be unchecked.
+- **Tree search**: Search the picker by file name, folder name, or path. Matching folders show their child contents, while matching files keep their parent folders visible.
 - **Always Exclude** matches still appear in the picker and in the generated `File Tree`, but their content is omitted. In the picker they are shown checked, dimmed, and locked.
 - Missing files or folders are ignored silently, so you can keep global rules such as `.env` or `secrets/` even when a project does not contain them.
 - The default always-exclude list is prefilled with common secret/key patterns and can be edited or cleared.
@@ -161,7 +163,7 @@ repo-glance/
 
 - [ ] Syntax highlighting for code preview
 - [ ] Collapsible file tree nodes
-- [ ] File search / filtering in tree
+- [x] File search / filtering in tree
 
 ## License 📄
 
