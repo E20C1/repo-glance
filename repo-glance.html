@@ -443,6 +443,134 @@
             font-size: 0.85rem;
         }
 
+        .tree-picker-section {
+            margin: 8px 0 12px;
+        }
+
+        .tree-picker {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+
+        .tree-picker summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 42px;
+            padding: 9px 12px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            list-style: none;
+        }
+
+        .tree-picker summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .tree-picker summary::after {
+            content: "⌄";
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .tree-picker[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .tree-picker-body {
+            max-height: 280px;
+            overflow: auto;
+            padding: 8px 10px 12px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        .tree-picker-empty {
+            padding: 14px 4px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .tree-picker-count {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 2px 9px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .tree-list,
+        .tree-children {
+            list-style: none;
+        }
+
+        .tree-children {
+            margin-left: 18px;
+            padding-left: 10px;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .tree-node-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 28px;
+            padding: 3px 6px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        .tree-node-row:hover {
+            background: var(--accent-soft);
+        }
+
+        .tree-node-row input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            accent-color: var(--accent);
+            flex: 0 0 auto;
+        }
+
+        .tree-node-row.locked {
+            opacity: 0.55;
+        }
+
+        .tree-node-row.locked input[type="checkbox"] {
+            cursor: not-allowed;
+        }
+
+        .tree-node-lock {
+            margin-left: auto;
+            color: var(--text-secondary);
+            font-size: 0.76rem;
+            white-space: nowrap;
+        }
+
+        .tree-node-icon {
+            flex: 0 0 auto;
+            width: 18px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .tree-node-name {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
         .feature-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1441,6 +1569,17 @@
                 </div>
                 <button type="button" class="btn btn-secondary btn-compact" onclick="saveAlwaysExcludePatterns()"
                     data-i18n="btnSaveAlwaysExcludes">常に除外を保存</button>
+                <div class="tree-picker-section">
+                    <details class="tree-picker" id="treeExcludeDetails">
+                        <summary>
+                            <span data-i18n="treePickerSummary">ツリーから選ぶ</span>
+                            <span class="tree-picker-count" id="treePickerSelectedCount">0件選択</span>
+                        </summary>
+                        <div class="tree-picker-body" id="treeExcludePicker">
+                            <p class="tree-picker-empty" data-i18n="treePickerEmpty">解析後にファイルツリーが表示されます</p>
+                        </div>
+                    </details>
+                </div>
             </div>
 
             <hr class="divider" />
@@ -1498,6 +1637,14 @@
         ];
         let activeOutputSource = null;
         let folderReparseTimer = null;
+        let activeOutputMeta = null;
+        let activeBaseFileContents = [];
+        let activeTreePaths = [];
+        let activeRootNames = [];
+        let selectableTreeRoot = null;
+        let selectableTreeIndex = new Map();
+        let selectedTreeExcludePaths = new Set();
+        let lockedTreeExcludePaths = new Set();
 
         window.addEventListener('DOMContentLoaded', () => {
             const tokenStatus = document.getElementById('tokenStatus');
@@ -1531,6 +1678,7 @@
                 projectExcludeInput.addEventListener('input', handleProjectExcludeInput);
             }
             updateExcludeRuleCount();
+            renderTreePicker();
         });
 
         function handleTokenSave() {
@@ -1548,13 +1696,15 @@
             if (!input) return;
             localStorage.setItem(ALWAYS_EXCLUDE_STORAGE_KEY, input.value);
             updateExcludeRuleCount();
+            scheduleFolderReparseIfReady();
             showToast(t('msgAlwaysExcludesSaved'), 'success');
         }
 
         function updateExcludeRuleCount() {
             const countEl = document.getElementById('excludeRuleCount');
             if (!countEl) return;
-            countEl.textContent = t('excludeRuleCount').replace('{n}', getActiveExcludeRules().length);
+            countEl.textContent = t('excludeRuleCount').replace('{n}', getActiveExcludeRules(activeRootNames).length);
+            updateTreeSelectionCount();
         }
 
         function handleProjectExcludeInput() {
@@ -1580,6 +1730,230 @@
                 && folderInput
                 && folderInput.files
                 && folderInput.files.length > 0;
+        }
+
+        function finalizeProcessedOutput(source, meta, fileContents, rootNames, options = {}) {
+            activeOutputMeta = meta;
+            activeBaseFileContents = fileContents;
+            activeTreePaths = (options.treePaths || fileContents.map(file => file.path))
+                .map(path => normalizeRepoPath(path))
+                .filter(Boolean);
+            activeRootNames = normalizeRootNames(rootNames);
+            updateSelectableTree(activeTreePaths, {
+                preserveSelection: Boolean(options.preserveTreeSelection)
+            });
+            setUIState(false, options.statusMessage || '');
+            activeOutputSource = source;
+            renderCurrentOutput(options.statusMessage || '');
+        }
+
+        function renderCurrentOutput(statusMessage = '') {
+            if (!activeOutputMeta) return;
+            const outputEl = document.getElementById('output');
+            const copyBtn = document.getElementById('copyBtn');
+            const statusEl = document.getElementById('status');
+            outputEl.value = generateFinalOutput(activeOutputMeta, getTreeFilteredFileContents(), activeTreePaths);
+            if (statusMessage) statusEl.textContent = statusMessage;
+            if (copyBtn) copyBtn.disabled = false;
+            refreshTreeCheckboxStates();
+            updateExcludeRuleCount();
+        }
+
+        function getTreeFilteredFileContents() {
+            if (selectedTreeExcludePaths.size === 0 && lockedTreeExcludePaths.size === 0) return activeBaseFileContents;
+            return activeBaseFileContents.filter(file => {
+                const path = normalizeRepoPath(file.path).toLowerCase();
+                return !selectedTreeExcludePaths.has(path) && !lockedTreeExcludePaths.has(path);
+            });
+        }
+
+        function updateSelectableTree(paths, options = {}) {
+            const normalizedPaths = [...new Set(paths.map(path => normalizeRepoPath(path)).filter(Boolean))];
+            const availableFiles = new Set(normalizedPaths.map(path => path.toLowerCase()));
+            lockedTreeExcludePaths = getLockedExcludePaths(normalizedPaths, activeRootNames);
+            if (options.preserveSelection) {
+                selectedTreeExcludePaths = new Set([...selectedTreeExcludePaths].filter(path => availableFiles.has(path)));
+            } else {
+                selectedTreeExcludePaths.clear();
+            }
+            selectedTreeExcludePaths = new Set([...selectedTreeExcludePaths].filter(path => !lockedTreeExcludePaths.has(path)));
+            selectableTreeRoot = buildSelectableTree(normalizedPaths);
+            selectableTreeIndex = new Map();
+            indexTreeNodes(selectableTreeRoot);
+            renderTreePicker();
+        }
+
+        function getLockedExcludePaths(paths, rootNames = '') {
+            const rules = getAlwaysExcludeRules(rootNames);
+            return new Set(paths
+                .map(path => normalizeRepoPath(path).toLowerCase())
+                .filter(path => isCustomExcluded(path, rules)));
+        }
+
+        function buildSelectableTree(paths) {
+            const rootNode = { name: '', path: '', type: 'dir', children: [], childMap: new Map(), filePaths: [] };
+            paths.forEach(path => {
+                const parts = path.split('/').filter(Boolean);
+                let current = rootNode;
+                parts.forEach((part, index) => {
+                    const isFile = index === parts.length - 1;
+                    const currentPath = parts.slice(0, index + 1).join('/');
+                    if (!current.childMap.has(part)) {
+                        current.childMap.set(part, {
+                            name: part,
+                            path: currentPath,
+                            type: isFile ? 'file' : 'dir',
+                            children: [],
+                            childMap: new Map(),
+                            filePaths: []
+                        });
+                        current.children.push(current.childMap.get(part));
+                    }
+                    current = current.childMap.get(part);
+                    if (isFile) current.type = 'file';
+                });
+            });
+            finalizeTreeNode(rootNode);
+            return rootNode;
+        }
+
+        function finalizeTreeNode(node) {
+            node.children.sort((a, b) => {
+                if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+                return a.name.localeCompare(b.name);
+            });
+            if (node.type === 'file') {
+                node.filePaths = [node.path.toLowerCase()];
+            } else {
+                node.children.forEach(finalizeTreeNode);
+                node.filePaths = node.children.flatMap(child => child.filePaths);
+            }
+        }
+
+        function indexTreeNodes(node) {
+            if (!node) return;
+            if (node.path) selectableTreeIndex.set(node.path, node);
+            node.children.forEach(indexTreeNodes);
+        }
+
+        function renderTreePicker() {
+            const picker = document.getElementById('treeExcludePicker');
+            if (!picker) return;
+            picker.innerHTML = '';
+
+            if (!selectableTreeRoot || selectableTreeRoot.filePaths.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'tree-picker-empty';
+                empty.textContent = t('treePickerEmpty');
+                picker.appendChild(empty);
+                updateTreeSelectionCount();
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'tree-list';
+            selectableTreeRoot.children.forEach(child => list.appendChild(renderTreeNode(child)));
+            picker.appendChild(list);
+            refreshTreeCheckboxStates();
+            updateTreeSelectionCount();
+        }
+
+        function renderTreeNode(node) {
+            const item = document.createElement('li');
+            const row = document.createElement('div');
+            row.className = 'tree-node-row';
+            const lockState = getTreeNodeLockState(node);
+            if (lockState !== 'none') row.classList.add('locked');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'tree-exclude-checkbox';
+            checkbox.dataset.path = node.path;
+            if (lockState === 'full') checkbox.disabled = true;
+            checkbox.addEventListener('change', handleTreeExcludeToggle);
+
+            const icon = document.createElement('span');
+            icon.className = 'tree-node-icon';
+            icon.textContent = node.type === 'dir' ? '▸' : '•';
+
+            const name = document.createElement('span');
+            name.className = 'tree-node-name';
+            name.textContent = node.name;
+
+            row.appendChild(checkbox);
+            row.appendChild(icon);
+            row.appendChild(name);
+            if (lockState !== 'none') {
+                const lock = document.createElement('span');
+                lock.className = 'tree-node-lock';
+                lock.textContent = t('treeAlwaysExcluded');
+                row.appendChild(lock);
+            }
+            item.appendChild(row);
+
+            if (node.children.length > 0) {
+                const children = document.createElement('ul');
+                children.className = 'tree-children';
+                node.children.forEach(child => children.appendChild(renderTreeNode(child)));
+                item.appendChild(children);
+            }
+
+            return item;
+        }
+
+        function handleTreeExcludeToggle(event) {
+            if (event.target.disabled) return;
+            const node = selectableTreeIndex.get(event.target.dataset.path);
+            if (!node) return;
+            setTreeNodeSelection(node, event.target.checked);
+            refreshTreeCheckboxStates();
+            updateExcludeRuleCount();
+            if (activeOutputMeta) renderCurrentOutput(t('msgTreeExclusionsApplied'));
+        }
+
+        function setTreeNodeSelection(node, checked) {
+            node.filePaths.forEach(path => {
+                if (lockedTreeExcludePaths.has(path)) return;
+                if (checked) {
+                    selectedTreeExcludePaths.add(path);
+                } else {
+                    selectedTreeExcludePaths.delete(path);
+                }
+            });
+        }
+
+        function refreshTreeCheckboxStates() {
+            document.querySelectorAll('.tree-exclude-checkbox').forEach(checkbox => {
+                const node = selectableTreeIndex.get(checkbox.dataset.path);
+                if (!node || node.filePaths.length === 0) return;
+                const checkedCount = node.filePaths.filter(path =>
+                    lockedTreeExcludePaths.has(path) || selectedTreeExcludePaths.has(path)
+                ).length;
+                const lockedCount = node.filePaths.filter(path => lockedTreeExcludePaths.has(path)).length;
+                checkbox.disabled = lockedCount === node.filePaths.length;
+                checkbox.checked = checkedCount === node.filePaths.length;
+                checkbox.indeterminate = checkedCount > 0 && checkedCount < node.filePaths.length;
+            });
+        }
+
+        function updateTreeSelectionCount() {
+            const countEl = document.getElementById('treePickerSelectedCount');
+            if (!countEl) return;
+            const totalSelected = selectedTreeExcludePaths.size + lockedTreeExcludePaths.size;
+            countEl.textContent = t('treePickerSelected').replace('{n}', totalSelected);
+        }
+
+        function getTreeNodeLockState(node) {
+            if (!node || node.filePaths.length === 0) return 'none';
+            const lockedCount = node.filePaths.filter(path => lockedTreeExcludePaths.has(path)).length;
+            if (lockedCount === 0) return 'none';
+            return lockedCount === node.filePaths.length ? 'full' : 'partial';
+        }
+
+        function normalizeRootNames(rootNames = '') {
+            return (Array.isArray(rootNames) ? rootNames : [rootNames])
+                .map(rootName => normalizeRepoPath(rootName))
+                .filter(Boolean);
         }
 
         // Helper for JS-based translations
@@ -1623,6 +1997,9 @@
 
             if (processing) {
                 activeOutputSource = null;
+                activeOutputMeta = null;
+                activeBaseFileContents = [];
+                activeTreePaths = [];
                 outputEl.value = '';
                 if (apiBtn) apiBtn.disabled = true;
                 if (folderInput) folderInput.disabled = true;
@@ -1663,14 +2040,17 @@
                 const treeRes = await fetch(`https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${defaultBranch}?recursive=1`, { headers });
                 if (!treeRes.ok) throw new Error(`Tree Error: ${treeRes.status}`);
                 const treeData = await treeRes.json();
-                const excludeRules = getActiveExcludeRules(repoInfo.repo);
+                const rootNames = repoInfo.repo;
+                const builtInRules = getBuiltInExcludeRules();
+                const contentExcludeRules = getManualExcludeRules(rootNames);
 
-                const files = treeData.tree.filter(item => {
+                const treeFiles = treeData.tree.filter(item => {
                     if (item.type !== 'blob') return false;
-                    return !isIgnored(item.path, excludeRules);
+                    return !isIgnored(item.path, builtInRules);
                 });
+                const files = treeFiles.filter(item => !isCustomExcluded(item.path, contentExcludeRules));
 
-                if (files.length === 0) throw new Error(t('msgFileNotFound'));
+                if (treeFiles.length === 0) throw new Error(t('msgFileNotFound'));
                 if (files.length > 300 && !token) {
                     if (!confirm(t('msgConfirmLarge').replace('{n}', files.length))) throw new Error(t('msgCancel'));
                 }
@@ -1697,10 +2077,10 @@
                 }
 
                 const metaInfo = { repo: `${repoInfo.owner}/${repoInfo.repo}`, url: urlInput, branch: defaultBranch, method: `API (${source})` };
-                outputEl.value = generateFinalOutput(metaInfo, fileContents);
-                setUIState(false, t('msgComplete'));
-                activeOutputSource = 'api';
-                document.getElementById('copyBtn').disabled = false;
+                finalizeProcessedOutput('api', metaInfo, fileContents, rootNames, {
+                    statusMessage: t('msgComplete'),
+                    treePaths: treeFiles.map(file => file.path)
+                });
 
             } catch (err) {
                 console.error(err);
@@ -1727,10 +2107,12 @@
                 loadedZip.forEach((relativePath, zipEntry) => zipEntries.push({ path: relativePath, entry: zipEntry }));
                 zipEntries.sort((a, b) => a.path.localeCompare(b.path));
                 const zipRootNames = getZipRootNames(zipEntries.map(item => item.path), file.name);
-                const excludeRules = getActiveExcludeRules(zipRootNames);
+                const builtInRules = getBuiltInExcludeRules();
+                const contentExcludeRules = getManualExcludeRules(zipRootNames);
+                const treeEntries = zipEntries.filter(item => !item.entry.dir && !isIgnored(item.path, builtInRules));
 
-                for (const item of zipEntries) {
-                    if (item.entry.dir || isIgnored(item.path, excludeRules)) continue;
+                for (const item of treeEntries) {
+                    if (isCustomExcluded(item.path, contentExcludeRules)) continue;
                     try {
                         const content = await item.entry.async("string");
                         fileContents.push({ path: item.path, content: content });
@@ -1739,12 +2121,12 @@
                     }
                 }
 
-                if (fileContents.length === 0) throw new Error(t('msgFileNotFound'));
+                if (treeEntries.length === 0) throw new Error(t('msgFileNotFound'));
                 const metaInfo = { repo: file.name, url: "Local File", branch: "Unknown", method: "Local ZIP (Offline)" };
-                outputEl.value = generateFinalOutput(metaInfo, fileContents);
-                setUIState(false, t('msgZipComplete'));
-                activeOutputSource = 'zip';
-                document.getElementById('copyBtn').disabled = false;
+                finalizeProcessedOutput('zip', metaInfo, fileContents, zipRootNames, {
+                    statusMessage: t('msgZipComplete'),
+                    treePaths: treeEntries.map(item => item.path)
+                });
 
             } catch (err) {
                 console.error(err);
@@ -1778,12 +2160,14 @@
 
                 let processedCount = 0;
                 const BATCH_SIZE = 10;
-                const excludeRules = getActiveExcludeRules(rootName);
+                const builtInRules = getBuiltInExcludeRules();
+                const contentExcludeRules = getManualExcludeRules(rootName);
+                const treeFiles = files.filter(file => !isIgnored(file.webkitRelativePath, builtInRules));
 
-                for (let i = 0; i < files.length; i += BATCH_SIZE) {
-                    const batch = files.slice(i, i + BATCH_SIZE);
+                for (let i = 0; i < treeFiles.length; i += BATCH_SIZE) {
+                    const batch = treeFiles.slice(i, i + BATCH_SIZE);
                     const results = await Promise.all(batch.map(async f => {
-                        if (isIgnored(f.webkitRelativePath, excludeRules)) return null;
+                        if (isCustomExcluded(f.webkitRelativePath, contentExcludeRules)) return null;
                         try {
                             const content = await reader(f);
                             return { path: f.webkitRelativePath, content: content };
@@ -1797,12 +2181,13 @@
                     // Optional update status if many files
                 }
 
-                if (fileContents.length === 0) throw new Error(t('msgFileNotFound'));
+                if (treeFiles.length === 0) throw new Error(t('msgFileNotFound'));
                 const metaInfo = { repo: rootName, url: "Local Folder", branch: "Unknown", method: "Local Folder (Offline)" };
-                outputEl.value = generateFinalOutput(metaInfo, fileContents);
-                setUIState(false, options.reapplyExcludes ? t('msgFolderReapplied') : t('msgFolderComplete'));
-                activeOutputSource = 'folder';
-                document.getElementById('copyBtn').disabled = false;
+                finalizeProcessedOutput('folder', metaInfo, fileContents, rootName, {
+                    preserveTreeSelection: Boolean(options.reapplyExcludes),
+                    statusMessage: options.reapplyExcludes ? t('msgFolderReapplied') : t('msgFolderComplete'),
+                    treePaths: treeFiles.map(file => file.webkitRelativePath)
+                });
 
             } catch (err) {
                 console.error(err);
@@ -1825,9 +2210,35 @@
         }
 
         function getActiveExcludeRules(rootNames = '') {
+            return [
+                ...getManualExcludeRules(rootNames),
+                ...getTreeExcludeRules(rootNames)
+            ];
+        }
+
+        function getManualExcludeRules(rootNames = '') {
+            return [
+                ...getAlwaysExcludeRules(rootNames),
+                ...getProjectExcludeRules(rootNames)
+            ];
+        }
+
+        function getAlwaysExcludeRules(rootNames = '') {
             const always = document.getElementById('alwaysExcludePatterns')?.value || '';
+            return parseExcludeRules(always, rootNames);
+        }
+
+        function getProjectExcludeRules(rootNames = '') {
             const project = document.getElementById('projectExcludePatterns')?.value || '';
-            return parseExcludeRules(`${always}\n${project}`, rootNames);
+            return parseExcludeRules(project, rootNames);
+        }
+
+        function getBuiltInExcludeRules() {
+            return [];
+        }
+
+        function getTreeExcludeRules(rootNames = '') {
+            return parseExcludeRules([...selectedTreeExcludePaths].join('\n'), rootNames);
         }
 
         function parseExcludeRules(text, rootNames = '') {
@@ -1945,7 +2356,7 @@
             return false;
         }
 
-        function generateFinalOutput(meta, files) {
+        function generateFinalOutput(meta, files, treePaths = files.map(f => f.path)) {
             let out = '';
             out += `---\n`;
             out += `Repository: ${meta.repo}\n`;
@@ -1958,7 +2369,7 @@
 
             out += '```\n';
             out += `File Tree:\n`;
-            try { out += generateAsciiTree(files.map(f => f.path)); } catch (e) { out += `(Tree Error: ${e.message})`; }
+            try { out += generateAsciiTree(treePaths); } catch (e) { out += `(Tree Error: ${e.message})`; }
             out += '\n```\n\n';
 
             files.forEach(f => {
@@ -2052,6 +2463,10 @@
                 placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
                 btnSaveAlwaysExcludes: "常に除外を保存",
                 excludeRuleCount: "{n}件のルール",
+                treePickerSummary: "ツリーから選ぶ",
+                treePickerEmpty: "解析後にファイルツリーが表示されます",
+                treePickerSelected: "{n}件選択",
+                treeAlwaysExcluded: "常に除外",
                 btnApi: "URLから取得",
                 btnZip: "ZIPを選択",
                 msgSelectFolder: "フォルダを選択してください",
@@ -2090,6 +2505,7 @@
                 msgFetchContent: "ファイル内容を取得中",
                 placeholderOutput: "ここに結果が表示されます...",
                 msgCopySuccess: "コピーしました！ ✨",
+                msgTreeExclusionsApplied: "ツリーの除外設定を反映しました！",
                 msgAlwaysExcludesSaved: "常に除外するルールを保存しました",
                 msgTokenSourceHtml: "(HTML設定トークン有効)",
                 msgTokenSourceEnv: "(env.jsトークン有効)",
@@ -2114,6 +2530,10 @@
                 placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
                 btnSaveAlwaysExcludes: "Save Always Excludes",
                 excludeRuleCount: "{n} rules",
+                treePickerSummary: "Choose from tree",
+                treePickerEmpty: "File tree will appear after analysis",
+                treePickerSelected: "{n} selected",
+                treeAlwaysExcluded: "Always",
                 btnApi: "Fetch from URL",
                 btnZip: "Select ZIP",
                 msgSelectFolder: "Select a folder",
@@ -2152,6 +2572,7 @@
                 msgFetchContent: "Fetching file content",
                 placeholderOutput: "Results will be shown here...",
                 msgCopySuccess: "Copied! ✨",
+                msgTreeExclusionsApplied: "Tree exclusions applied!",
                 msgAlwaysExcludesSaved: "Always-exclude rules saved",
                 msgTokenSourceHtml: "(HTML Config Token Active)",
                 msgTokenSourceEnv: "(env.js Token Active)",
@@ -2176,6 +2597,7 @@
                 }
             });
             localStorage.setItem('repo-glance-lang', lang);
+            renderTreePicker();
             updateExcludeRuleCount();
         }
 

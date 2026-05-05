@@ -106,9 +106,11 @@ Before fetching or parsing, use **Copy Exclusions** to keep specific files or fo
 
 - **This Run**: Rules for the current repository or folder only.
 - **Always Exclude**: Saved in your browser and applied to every project.
+- **Choose from tree**: After analysis, open the dropdown and select files or folders with checkboxes. Checking a parent folder selects its child files; individual children can still be unchecked.
+- **Always Exclude** matches still appear in the picker and in the generated `File Tree`, but their content is omitted. In the picker they are shown checked, dimmed, and locked.
 - Missing files or folders are ignored silently, so you can keep global rules such as `.env` or `secrets/` even when a project does not contain them.
 - The default always-exclude list is prefilled with common secret/key patterns and can be edited or cleared.
-- When a Local Folder result is already ready to copy, editing **This Run** automatically re-parses the selected folder so the output reflects the latest exclusions.
+- When a Local Folder result is already ready to copy, editing **This Run** or saving **Always Exclude** automatically re-parses the selected folder so the output reflects the latest exclusions.
 
 ### Result
 
@@ -131,6 +133,8 @@ src/generated.ts
 Rules can be file names, folder names, relative paths, or simple `*` / `?` patterns. Folder rules may end with `/`, but they do not have to.
 
 You may include the project root folder in a rule, such as `BlurSubspace/src/assets/houston.webp`. Repo Glance also understands the equivalent relative path `src/assets/houston.webp`.
+
+Tree selections are combined with the manual rules for the current output, but they do not remove the **This Run** text box for users who prefer direct path entry.
 
 ## File Structure 📁
 
