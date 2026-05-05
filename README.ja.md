@@ -159,12 +159,6 @@ repo-glance/
 - **API利用**: GitHub REST API v3
 - **対応ブラウザ**: Chrome, Firefox, Edge, Safari (モダンブラウザ)
 
-## Todo 📝
-
-- [ ] プレビューエリアのシンタックスハイライト
-- [ ] ファイルツリーの折りたたみ機能
-- [x] ツリー内のファイル検索・フィルタリング
-
 ## ライセンス 📄
 
 [MIT License](LICENSE)
