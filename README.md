@@ -78,6 +78,7 @@
 - **Privacy Focused**: Runs entirely in your browser. No data is sent to any external server (except GitHub API if used).
 - **Smart Filtering**: Automatically excludes binary files (images, executables) and heavy directories like `.git` or `node_modules`.
 - **Copy Exclusions**: Add project-specific or always-on path rules so selected folders/files never enter the generated LLM text.
+- **File Tree Only**: Output just the file tree without reading file contents, useful for projects with large media assets.
 - **Tree Search**: Filter the tree picker by file name, folder name, or relative path.
 
 ## How to Use 👆
@@ -117,6 +118,7 @@ Before fetching or parsing, use **Copy Exclusions** to keep specific files or fo
 ### Result
 
 - The tool displays repository metadata, an ASCII file tree, and the text content of all files combined.
+- Enable **"File tree only"** to skip content reads and output only the generated `File Tree`.
 - Click **"Copy All to Clipboard"** to paste the context into LLMs (ChatGPT, Claude, etc.).
 
 ## Configuration 🛠️
@@ -130,9 +132,10 @@ Built-in filters skip common binary files and heavy directories. Copy Exclusions
 secrets/
 src/generated.ts
 *.pem
+.wav
 ```
 
-Rules can be file names, folder names, relative paths, or simple `*` / `?` patterns. Folder rules may end with `/`, but they do not have to.
+Rules can be file names, folder names, relative paths, or simple `*` / `?` patterns. Extension-only rules such as `.wav` also exclude files with that extension from content output. Folder rules may end with `/`, but they do not have to.
 
 You may include the project root folder in a rule, such as `BlurSubspace/src/assets/houston.webp`. Repo Glance also understands the equivalent relative path `src/assets/houston.webp`.
 

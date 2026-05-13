@@ -437,6 +437,10 @@
             margin-bottom: 12px;
         }
 
+        .output-options {
+            margin-top: 14px;
+        }
+
         .btn-compact {
             width: auto;
             padding: 9px 14px;
@@ -1597,6 +1601,13 @@
                 </div>
                 <button type="button" class="btn btn-secondary btn-compact" onclick="saveAlwaysExcludePatterns()"
                     data-i18n="btnSaveAlwaysExcludes">常に除外を保存</button>
+                <div class="output-options">
+                    <label class="form-label" data-i18n="labelOutputMode">出力モード</label>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="structureOnlyOutput" />
+                        <label for="structureOnlyOutput" data-i18n="labelStructureOnlyOutput">ファイル構造のみ</label>
+                    </div>
+                </div>
                 <div class="tree-picker-section">
                     <details class="tree-picker" id="treeExcludeDetails">
                         <summary>
@@ -1651,11 +1662,16 @@
 
 
         const IGNORE_EXTENSIONS = [
-            '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.mp4', '.mp3',
-            '.pdf', '.exe', '.dll', '.bin', '.zip', '.tar', '.gz',
+            '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.webp', '.avif', '.bmp', '.tif', '.tiff',
+            '.mp4', '.m4v', '.mov', '.avi', '.mkv', '.webm',
+            '.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg', '.aiff',
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+            '.exe', '.dll', '.bin', '.zip', '.tar', '.gz', '.7z', '.rar',
             '.pyc', '.class', '.o', '.obj', 'package-lock.json', 'yarn.lock', '.git', '.DS_Store'
         ];
+        const MAX_TEXT_FILE_SIZE_BYTES = 2 * 1024 * 1024;
         const IGNORE_DIRS = ['.git', 'node_modules', 'dist', 'build', 'vendor', '__pycache__', '.idea', '.vscode'];
+        const EXACT_DOTFILE_EXCLUDE_RULES = ['.env', '.gitignore', '.gitattributes', '.npmrc', '.yarnrc', '.prettierrc', '.eslintrc'];
         const ALWAYS_EXCLUDE_STORAGE_KEY = 'repo-glance-always-exclude-patterns';
         const DEFAULT_ALWAYS_EXCLUDE_PATTERNS = [
             '.env',
@@ -1711,6 +1727,10 @@
             if (projectExcludeInput) {
                 projectExcludeInput.addEventListener('input', handleProjectExcludeInput);
             }
+            const structureOnlyInput = document.getElementById('structureOnlyOutput');
+            if (structureOnlyInput) {
+                structureOnlyInput.addEventListener('change', handleOutputModeChange);
+            }
             const treeSearchInput = document.getElementById('treeSearchInput');
             if (treeSearchInput) {
                 treeSearchInput.addEventListener('input', handleTreeSearchInput);
@@ -1748,6 +1768,32 @@
         function handleProjectExcludeInput() {
             updateExcludeRuleCount();
             scheduleFolderReparseIfReady();
+        }
+
+        function isStructureOnlyMode() {
+            return Boolean(document.getElementById('structureOnlyOutput')?.checked);
+        }
+
+        function handleOutputModeChange() {
+            if (!activeOutputMeta) return;
+            if (isStructureOnlyMode()) {
+                activeBaseFileContents = [];
+                renderCurrentOutput(t('msgStructureOnlyApplied'));
+                return;
+            }
+            if (activeOutputSource === 'folder' && canReparseCurrentFolderOutput()) {
+                runFolderProcess({ reapplyExcludes: true });
+                return;
+            }
+            const zipInput = document.getElementById('zipInput');
+            if (activeOutputSource === 'zip' && zipInput?.files?.length) {
+                runZipProcess();
+                return;
+            }
+            const repoUrl = document.getElementById('repoUrl')?.value.trim();
+            if (activeOutputSource === 'api' && repoUrl) {
+                runApiProcess();
+            }
         }
 
         function scheduleFolderReparseIfReady() {
@@ -2142,34 +2188,38 @@
 
                 const treeFiles = treeData.tree.filter(item => {
                     if (item.type !== 'blob') return false;
-                    return !isIgnored(item.path, builtInRules);
+                    return !isTreeIgnored(item.path, builtInRules);
                 });
-                const files = treeFiles.filter(item => !isCustomExcluded(item.path, contentExcludeRules));
+                const files = isStructureOnlyMode()
+                    ? []
+                    : treeFiles.filter(item => !isIgnored(item.path, contentExcludeRules, item.size));
 
                 if (treeFiles.length === 0) throw new Error(t('msgFileNotFound'));
                 if (files.length > 300 && !token) {
                     if (!confirm(t('msgConfirmLarge').replace('{n}', files.length))) throw new Error(t('msgCancel'));
                 }
 
-                statusEl.innerHTML = `${t('msgFetchContent')} (0/${files.length})...`;
                 const fileContents = [];
                 const BATCH_SIZE = 5;
 
-                for (let i = 0; i < files.length; i += BATCH_SIZE) {
-                    const batch = files.slice(i, i + BATCH_SIZE);
-                    const promises = batch.map(async (file) => {
-                        try {
-                            const blobRes = await fetch(file.url, { headers });
-                            if (!blobRes.ok) return { path: file.path, content: `[Error: ${blobRes.status}]` };
-                            const blobData = await blobRes.json();
-                            return { path: file.path, content: decodeBase64(blobData.content) };
-                        } catch (e) {
-                            return { path: file.path, content: `[Error: ${e.message}]` };
-                        }
-                    });
-                    const results = await Promise.all(promises);
-                    fileContents.push(...results);
-                    statusEl.innerHTML = `${t('msgFetchContent')} (${Math.min(i + BATCH_SIZE, files.length)}/${files.length})...`;
+                if (!isStructureOnlyMode()) {
+                    statusEl.innerHTML = `${t('msgFetchContent')} (0/${files.length})...`;
+                    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+                        const batch = files.slice(i, i + BATCH_SIZE);
+                        const promises = batch.map(async (file) => {
+                            try {
+                                const blobRes = await fetch(file.url, { headers });
+                                if (!blobRes.ok) return { path: file.path, content: `[Error: ${blobRes.status}]` };
+                                const blobData = await blobRes.json();
+                                return { path: file.path, content: decodeBase64(blobData.content) };
+                            } catch (e) {
+                                return { path: file.path, content: `[Error: ${e.message}]` };
+                            }
+                        });
+                        const results = await Promise.all(promises);
+                        fileContents.push(...results);
+                        statusEl.innerHTML = `${t('msgFetchContent')} (${Math.min(i + BATCH_SIZE, files.length)}/${files.length})...`;
+                    }
                 }
 
                 const metaInfo = { repo: `${repoInfo.owner}/${repoInfo.repo}`, url: urlInput, branch: defaultBranch, method: `API (${source})` };
@@ -2205,15 +2255,17 @@
                 const zipRootNames = getZipRootNames(zipEntries.map(item => item.path), file.name);
                 const builtInRules = getBuiltInExcludeRules();
                 const contentExcludeRules = getManualExcludeRules(zipRootNames);
-                const treeEntries = zipEntries.filter(item => !item.entry.dir && !isIgnored(item.path, builtInRules));
+                const treeEntries = zipEntries.filter(item => !item.entry.dir && !isTreeIgnored(item.path, builtInRules));
 
-                for (const item of treeEntries) {
-                    if (isCustomExcluded(item.path, contentExcludeRules)) continue;
-                    try {
-                        const content = await item.entry.async("string");
-                        fileContents.push({ path: item.path, content: content });
-                    } catch (e) {
-                        fileContents.push({ path: item.path, content: `[Error reading zip entry: ${e.message}]` });
+                if (!isStructureOnlyMode()) {
+                    for (const item of treeEntries) {
+                        if (isIgnored(item.path, contentExcludeRules, getZipEntrySize(item.entry))) continue;
+                        try {
+                            const content = await item.entry.async("string");
+                            fileContents.push({ path: item.path, content: content });
+                        } catch (e) {
+                            fileContents.push({ path: item.path, content: `[Error reading zip entry: ${e.message}]` });
+                        }
                     }
                 }
 
@@ -2258,12 +2310,14 @@
                 const BATCH_SIZE = 10;
                 const builtInRules = getBuiltInExcludeRules();
                 const contentExcludeRules = getManualExcludeRules(rootName);
-                const treeFiles = files.filter(file => !isIgnored(file.webkitRelativePath, builtInRules));
+                const treeFiles = files.filter(file => !isTreeIgnored(file.webkitRelativePath, builtInRules));
+                const contentFiles = isStructureOnlyMode()
+                    ? []
+                    : treeFiles.filter(file => !isIgnored(file.webkitRelativePath, contentExcludeRules, file.size));
 
-                for (let i = 0; i < treeFiles.length; i += BATCH_SIZE) {
-                    const batch = treeFiles.slice(i, i + BATCH_SIZE);
+                for (let i = 0; i < contentFiles.length; i += BATCH_SIZE) {
+                    const batch = contentFiles.slice(i, i + BATCH_SIZE);
                     const results = await Promise.all(batch.map(async f => {
-                        if (isCustomExcluded(f.webkitRelativePath, contentExcludeRules)) return null;
                         try {
                             const content = await reader(f);
                             return { path: f.webkitRelativePath, content: content };
@@ -2435,21 +2489,44 @@
                 }
 
                 return rule.values.some(value => {
-                    if (!value.includes('/')) return fileName === value;
+                    if (!value.includes('/')) {
+                        if (fileName === value) return true;
+                        return isExtensionShorthand(value) && !fileName.startsWith('.') && fileName.endsWith(value);
+                    }
                     return normalizedPath === value || normalizedPath.endsWith(`/${value}`);
                 });
             });
         }
 
-        function isIgnored(path, customRules = getActiveExcludeRules()) {
+        function isExtensionShorthand(value) {
+            return value.startsWith('.')
+                && value.length > 1
+                && !/[*?/]/.test(value)
+                && !EXACT_DOTFILE_EXCLUDE_RULES.includes(value);
+        }
+
+        function isTreeIgnored(path, customRules = getActiveExcludeRules()) {
             const normalizedPath = normalizeRepoPath(path);
             const pathParts = normalizedPath.split('/');
-            const fileName = pathParts[pathParts.length - 1];
             if (normalizedPath.includes('__MACOSX')) return true;
             if (pathParts.some(p => IGNORE_DIRS.includes(p))) return true;
-            if (IGNORE_EXTENSIONS.some(ext => fileName.toLowerCase().endsWith(ext.toLowerCase()))) return true;
             if (isCustomExcluded(normalizedPath, customRules)) return true;
             return false;
+        }
+
+        function isIgnored(path, customRules = getActiveExcludeRules(), sizeBytes = null) {
+            const normalizedPath = normalizeRepoPath(path);
+            const pathParts = normalizedPath.split('/');
+            const fileName = pathParts[pathParts.length - 1] || '';
+            if (isTreeIgnored(normalizedPath, customRules)) return true;
+            if (IGNORE_EXTENSIONS.some(ext => fileName.toLowerCase().endsWith(ext.toLowerCase()))) return true;
+            if (Number.isFinite(sizeBytes) && sizeBytes > MAX_TEXT_FILE_SIZE_BYTES) return true;
+            return false;
+        }
+
+        function getZipEntrySize(entry) {
+            const size = entry?._data?.uncompressedSize ?? entry?._data?.compressedSize;
+            return Number.isFinite(size) ? size : null;
         }
 
         function generateFinalOutput(meta, files, treePaths = files.map(f => f.path)) {
@@ -2458,7 +2535,8 @@
             out += `Repository: ${meta.repo}\n`;
             out += `Url: ${meta.url}\n`;
             out += `Branch: ${meta.branch}\n`;
-            out += `Files: ${files.length}\n`;
+            out += `Files: ${treePaths.length}\n`;
+            if (treePaths.length !== files.length) out += `Included contents: ${files.length}\n`;
             out += `Method: ${meta.method}\n`;
             out += `Generated at: ${new Date().toLocaleString()}\n`;
             out += `---\n\n`;
@@ -2555,6 +2633,8 @@
                 labelExcludeSettings: "コピー除外設定",
                 labelProjectExcludes: "今回だけ除外",
                 labelAlwaysExcludes: "常に除外",
+                labelOutputMode: "出力モード",
+                labelStructureOnlyOutput: "ファイル構造のみ",
                 placeholderProjectExcludes: ".env.local\nsecrets/\nsrc/generated.ts",
                 placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
                 btnSaveAlwaysExcludes: "常に除外を保存",
@@ -2593,6 +2673,7 @@
                 msgZipComplete: "ZIP解析完了！",
                 msgFolderComplete: "フォルダ解析完了！",
                 msgFolderReapplied: "除外設定を反映しました！",
+                msgStructureOnlyApplied: "ファイル構造のみ表示しました！",
                 msgError: "エラー: ",
                 msgErrorDetail: "エラー詳細:",
                 msgFileNotFound: "ファイルが見つかりません",
@@ -2624,6 +2705,8 @@
                 labelExcludeSettings: "Copy Exclusions",
                 labelProjectExcludes: "This Run",
                 labelAlwaysExcludes: "Always Exclude",
+                labelOutputMode: "Output Mode",
+                labelStructureOnlyOutput: "File tree only",
                 placeholderProjectExcludes: ".env.local\nsecrets/\nsrc/generated.ts",
                 placeholderAlwaysExcludes: ".env\n.env.*\n*.pem\n*.key",
                 btnSaveAlwaysExcludes: "Save Always Excludes",
@@ -2662,6 +2745,7 @@
                 msgZipComplete: "ZIP analysis completed!",
                 msgFolderComplete: "Folder analysis completed!",
                 msgFolderReapplied: "Exclusions applied!",
+                msgStructureOnlyApplied: "Showing file tree only!",
                 msgError: "Error: ",
                 msgErrorDetail: "Error Details:",
                 msgFileNotFound: "File not found",
